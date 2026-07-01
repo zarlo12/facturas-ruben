@@ -206,6 +206,36 @@
       margin-bottom: 6px;
     }
 
+    .extra-field-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 22px;
+      gap: 6px;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .extra-field-row input {
+      padding: 6px 7px;
+      font-size: 12.5px;
+    }
+
+    .add-extra-btn {
+      width: 100%;
+      padding: 7px;
+      border: 1.5px dashed var(--ui-border);
+      background: #fafbfc;
+      border-radius: 8px;
+      color: var(--ui-accent);
+      font-weight: 600;
+      font-size: 12px;
+      cursor: pointer;
+      margin-top: 2px;
+    }
+
+    .add-extra-btn:hover {
+      background: #eef3ff;
+    }
+
     .actions {
       display: flex;
       flex-direction: column;
@@ -240,6 +270,13 @@
 
     .btn-secondary:hover {
       background: #f2f3f5;
+    }
+
+    .save-indicator {
+      font-size: 11.5px;
+      color: var(--ui-muted);
+      text-align: center;
+      min-height: 14px;
     }
 
     [data-only] {
@@ -804,6 +841,8 @@
               <input id="f-issuer-tax-value" name="issuerTaxValue" type="text">
             </div>
           </div>
+          <div id="issuer-extra-container"></div>
+          <button type="button" class="add-extra-btn" id="btn-add-issuer-extra">+ Agregar campo</button>
         </fieldset>
 
         <fieldset>
@@ -830,6 +869,8 @@
             <label for="f-client-email">Email</label>
             <input id="f-client-email" name="clientEmail" type="text">
           </div>
+          <div id="client-extra-container"></div>
+          <button type="button" class="add-extra-btn" id="btn-add-client-extra">+ Agregar campo</button>
         </fieldset>
 
         <fieldset>
@@ -872,6 +913,8 @@
       <div class="actions">
         <button type="button" class="btn btn-primary" id="btn-export-pdf">🖨 Exportar a PDF</button>
         <button type="button" class="btn btn-secondary" id="btn-example">Cargar datos de ejemplo</button>
+        <button type="button" class="btn btn-secondary" id="btn-clear-saved">Vaciar formulario</button>
+        <div class="save-indicator" id="save-indicator"></div>
       </div>
     </div>
 
@@ -893,7 +936,9 @@
         clientName: '', clientAddress: '', clientTaxLabel: '', clientTaxValue: '', clientEmail: '',
         taxName: '', taxRate: 0,
         paymentMethod: '', footerNote: '',
-        items: []
+        items: [],
+        issuerExtra: [],
+        clientExtra: []
       };
 
       var EXAMPLES = {
@@ -907,7 +952,9 @@
           items: [
             { description: 'Servicios profesionales', qty: 2, unitPrice: 450 },
             { description: 'Mercancía — 3 unidades', qty: 3, unitPrice: 100 }
-          ]
+          ],
+          issuerExtra: [],
+          clientExtra: []
         },
         estrella: {
           template: 'estrella', number: '2026/0001', date: '20/04/2026', currencyCode: 'USD', currencySymbol: 'USD ', country: '',
@@ -921,7 +968,9 @@
           footerNote: 'Este documento es de uso comercial y no constituye factura fiscal en Argentina.',
           items: [
             { description: 'Diseño y desarrollo de logotipo profesional (a partir de concepto existente).', qty: 1, unitPrice: 450 }
-          ]
+          ],
+          issuerExtra: [],
+          clientExtra: []
         }
       };
 
@@ -937,6 +986,24 @@
         var n = Number(amount) || 0;
         var formatted = n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         return (prefix || '') + formatted;
+      }
+
+      function renderExtraPartySub(extra) {
+        return (extra || []).filter(function (f) { return f.label || f.value; }).map(function (f) {
+          return '<div class="party-sub">' + escapeHtml(f.label) + (f.value ? ': ' + escapeHtml(f.value) : '') + '</div>';
+        }).join('');
+      }
+
+      function renderExtraClientRows(extra) {
+        return (extra || []).filter(function (f) { return f.label || f.value; }).map(function (f) {
+          return '<div class="row"><span class="lbl">' + escapeHtml(f.label) + ':</span><span>' + escapeHtml(f.value) + '</span></div>';
+        }).join('');
+      }
+
+      function renderExtraEstLines(extra) {
+        return (extra || []).filter(function (f) { return f.label || f.value; }).map(function (f) {
+          return '<div class="est-line">' + escapeHtml(f.label) + (f.value ? ': ' + escapeHtml(f.value) : '') + '</div>';
+        }).join('');
       }
 
       function computeTotals(items, taxRate) {
@@ -958,7 +1025,7 @@
       function readFormIntoState() {
         var form = document.getElementById('invoice-form');
         Object.keys(state).forEach(function (key) {
-          if (key === 'items' || key === 'template') return;
+          if (key === 'items' || key === 'template' || key === 'issuerExtra' || key === 'clientExtra') return;
           var el = form.elements[key];
           if (el) state[key] = el.value;
         });
@@ -996,6 +1063,37 @@
       }
 
       // ---------------------------------------------------------------
+      // Extra fields (dynamic label/value rows) for Emisor / Cliente
+      // ---------------------------------------------------------------
+      var EXTRA_CONTAINERS = { issuerExtra: 'issuer-extra-container', clientExtra: 'client-extra-container' };
+
+      function renderExtraFieldsForm(key) {
+        var container = document.getElementById(EXTRA_CONTAINERS[key]);
+        container.innerHTML = '';
+        state[key].forEach(function (field, index) {
+          var row = document.createElement('div');
+          row.className = 'extra-field-row';
+          row.innerHTML =
+            '<input type="text" data-section="' + key + '" data-idx="' + index + '" data-field="label" value="' + escapeHtml(field.label) + '" placeholder="Etiqueta (p.ej. Teléfono)">' +
+            '<input type="text" data-section="' + key + '" data-idx="' + index + '" data-field="value" value="' + escapeHtml(field.value) + '" placeholder="Valor">' +
+            '<button type="button" class="item-remove" data-remove-section="' + key + '" data-remove="' + index + '" title="Quitar campo">&times;</button>';
+          container.appendChild(row);
+        });
+      }
+
+      function addExtraField(key) {
+        state[key].push({ label: '', value: '' });
+        renderExtraFieldsForm(key);
+        renderPreview();
+      }
+
+      function removeExtraField(key, index) {
+        state[key].splice(index, 1);
+        renderExtraFieldsForm(key);
+        renderPreview();
+      }
+
+      // ---------------------------------------------------------------
       // Template renderers
       // ---------------------------------------------------------------
       function renderMxItemRows(items, symbol) {
@@ -1019,7 +1117,7 @@
           '<div class="mx-card">' +
           '<div class="mx-head">' +
           '<div>' +
-          '<h1>FACTURA</h1>' +
+          '<h1>Invoice</h1>' +
           '<div class="mx-meta">No. ' + escapeHtml(data.number) + ' · Fecha de emisión ' + escapeHtml(data.date) + '</div>' +
           '</div>' +
           '<div class="mx-flag-block">' +
@@ -1034,12 +1132,14 @@
           '<div class="party-name">' + escapeHtml(data.issuerName) + '</div>' +
           '<div class="party-sub">' + escapeHtml(data.issuerAddress) + '</div>' +
           '<div class="party-sub">' + escapeHtml(data.issuerTaxLabel) + (data.issuerTaxValue ? ': ' + escapeHtml(data.issuerTaxValue) : '') + '</div>' +
+          renderExtraPartySub(data.issuerExtra) +
           '</div>' +
           '<div class="party">' +
           '<div class="party-label buyer">COMPRADOR · EXTRANJERO</div>' +
           '<div class="party-name">' + escapeHtml(data.clientName) + '</div>' +
           '<div class="party-sub">' + escapeHtml(data.clientAddress) + '</div>' +
           '<div class="party-sub">' + escapeHtml(data.clientTaxLabel) + (data.clientTaxValue ? ': ' + escapeHtml(data.clientTaxValue) : '') + '</div>' +
+          renderExtraPartySub(data.clientExtra) +
           '</div>' +
           '</div>' +
           '<table class="mx-table">' +
@@ -1079,12 +1179,13 @@
           '<div class="est-company">' + escapeHtml(data.issuerName) + '</div>' +
           '<div class="est-line">' + escapeHtml(data.issuerAddress) + '</div>' +
           '<div class="est-line">' + escapeHtml(data.issuerContact) + '</div>' +
+          renderExtraEstLines(data.issuerExtra) +
           '</div>' +
           '</div>' +
-          '<div class="est-invoice-word">FACTURA</div>' +
+          '<div class="est-invoice-word">Invoice</div>' +
           '</div>' +
           '<div class="est-bar">' +
-          '<div class="est-bar-left">FACTURA No. ' + escapeHtml(data.number) + '</div>' +
+          '<div class="est-bar-left">Invoice No. ' + escapeHtml(data.number) + '</div>' +
           '<div class="est-bar-right">FECHA: ' + escapeHtml(data.date) + '</div>' +
           '</div>' +
           '<div class="est-client">' +
@@ -1092,6 +1193,7 @@
           '<div class="row"><span class="lbl">Dirección:</span><span>' + escapeHtml(data.clientAddress) + '</span></div>' +
           '<div class="row"><span class="lbl">' + escapeHtml(data.clientTaxLabel) + ':</span><span>' + escapeHtml(data.clientTaxValue) + '</span></div>' +
           '<div class="row"><span class="lbl">Email:</span><span>' + escapeHtml(data.clientEmail) + '</span></div>' +
+          renderExtraClientRows(data.clientExtra) +
           '</div>' +
           '<div class="est-section-title">DESCRIPCIÓN DEL SERVICIO</div>' +
           '<table class="est-table">' +
@@ -1118,6 +1220,48 @@
         readFormIntoState();
         var html = state.template === 'mx' ? renderMx(state) : renderEstrella(state);
         document.getElementById('preview').innerHTML = html;
+        saveState();
+      }
+
+      // ---------------------------------------------------------------
+      // Autoguardado local (localStorage, sin descargas ni servidor)
+      // ---------------------------------------------------------------
+      var STORAGE_KEY = 'facturas-ruben-state';
+      var saveIndicatorTimer = null;
+
+      function saveState() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+          var indicator = document.getElementById('save-indicator');
+          indicator.textContent = 'Guardado ✓';
+          clearTimeout(saveIndicatorTimer);
+          saveIndicatorTimer = setTimeout(function () { indicator.textContent = ''; }, 1500);
+        } catch (e) { /* localStorage no disponible: se ignora */ }
+      }
+
+      function loadSavedState() {
+        try {
+          var raw = localStorage.getItem(STORAGE_KEY);
+          return raw ? JSON.parse(raw) : null;
+        } catch (e) {
+          return null;
+        }
+      }
+
+      function clearSavedState() {
+        if (!confirm('¿Vaciar el formulario y borrar lo guardado en este navegador?')) return;
+        localStorage.removeItem(STORAGE_KEY);
+        state.number = ''; state.date = ''; state.currencyCode = ''; state.currencySymbol = ''; state.country = '';
+        state.issuerName = ''; state.issuerAddress = ''; state.issuerContact = ''; state.issuerTaxLabel = ''; state.issuerTaxValue = '';
+        state.clientName = ''; state.clientAddress = ''; state.clientTaxLabel = ''; state.clientTaxValue = ''; state.clientEmail = '';
+        state.taxName = ''; state.taxRate = 0; state.paymentMethod = ''; state.footerNote = '';
+        state.items = [{ description: '', qty: 1, unitPrice: 0 }];
+        state.issuerExtra = []; state.clientExtra = [];
+        loadStateIntoForm();
+        renderItemsForm();
+        renderExtraFieldsForm('issuerExtra');
+        renderExtraFieldsForm('clientExtra');
+        renderPreview();
       }
 
       // ---------------------------------------------------------------
@@ -1138,6 +1282,8 @@
         Object.assign(state, example);
         loadStateIntoForm();
         renderItemsForm();
+        renderExtraFieldsForm('issuerExtra');
+        renderExtraFieldsForm('clientExtra');
         setTemplate(tpl);
       }
 
@@ -1177,15 +1323,50 @@
       });
 
       document.getElementById('btn-add-item').addEventListener('click', addItem);
+
+      ['issuer-extra-container', 'client-extra-container'].forEach(function (id) {
+        document.getElementById(id).addEventListener('input', function (e) {
+          var section = e.target.getAttribute('data-section');
+          var idx = e.target.getAttribute('data-idx');
+          var field = e.target.getAttribute('data-field');
+          if (!section || idx === null || !field) return;
+          state[section][Number(idx)][field] = e.target.value;
+          renderPreview();
+        });
+
+        document.getElementById(id).addEventListener('click', function (e) {
+          var section = e.target.getAttribute('data-remove-section');
+          var idx = e.target.getAttribute('data-remove');
+          if (section && idx !== null) removeExtraField(section, Number(idx));
+        });
+      });
+
+      document.getElementById('btn-add-issuer-extra').addEventListener('click', function () { addExtraField('issuerExtra'); });
+      document.getElementById('btn-add-client-extra').addEventListener('click', function () { addExtraField('clientExtra'); });
+
       document.getElementById('btn-export-pdf').addEventListener('click', exportToPdf);
       document.getElementById('btn-example').addEventListener('click', function () { loadExample(state.template); });
       document.getElementById('btn-tpl-mx').addEventListener('click', function () { setTemplate('mx'); });
       document.getElementById('btn-tpl-estrella').addEventListener('click', function () { setTemplate('estrella'); });
+      document.getElementById('btn-clear-saved').addEventListener('click', clearSavedState);
 
       // ---------------------------------------------------------------
-      // Init
+      // Init: restaura lo guardado en este navegador, o carga el ejemplo
       // ---------------------------------------------------------------
-      loadExample('mx');
+      var saved = loadSavedState();
+      if (saved) {
+        Object.assign(state, saved);
+        state.items = state.items && state.items.length ? state.items : [{ description: '', qty: 1, unitPrice: 0 }];
+        state.issuerExtra = state.issuerExtra || [];
+        state.clientExtra = state.clientExtra || [];
+        loadStateIntoForm();
+        renderItemsForm();
+        renderExtraFieldsForm('issuerExtra');
+        renderExtraFieldsForm('clientExtra');
+        setTemplate(state.template || 'mx');
+      } else {
+        loadExample('mx');
+      }
     })();
   </script>
 </body>
