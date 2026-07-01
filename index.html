@@ -845,7 +845,7 @@
           <legend>Impuesto</legend>
           <div class="field-row">
             <div class="field">
-              <label for="f-tax-name">Nombre (IVA / VAT / Tax)</label>
+              <label for="f-tax-name">Nombre del impuesto (IVA, etc.)</label>
               <input id="f-tax-name" name="taxName" type="text">
             </div>
             <div class="field">
@@ -898,15 +898,15 @@
 
       var EXAMPLES = {
         mx: {
-          template: 'mx', number: 'INV-2026-0042', date: '2026-06-09', currencyCode: 'MXN', currencySymbol: 'MX$', country: 'Mexico',
-          issuerName: 'Local Supplier Co.', issuerAddress: 'Established in Mexico', issuerContact: '',
+          template: 'mx', number: 'INV-2026-0042', date: '2026-06-09', currencyCode: 'MXN', currencySymbol: 'MX$', country: 'México',
+          issuerName: 'Proveedor Local S.A.', issuerAddress: 'Establecido en México', issuerContact: '',
           issuerTaxLabel: 'RFC', issuerTaxValue: 'MX123456789',
-          clientName: 'Overseas Buyer Ltd', clientAddress: 'Export customer, abroad',
-          clientTaxLabel: 'Foreign tax ID', clientTaxValue: '', clientEmail: '',
-          taxName: 'VAT', taxRate: 16, paymentMethod: '', footerNote: '',
+          clientName: 'Comprador Extranjero Ltd', clientAddress: 'Cliente de exportación, en el extranjero',
+          clientTaxLabel: 'ID fiscal extranjero', clientTaxValue: '', clientEmail: '',
+          taxName: 'IVA', taxRate: 16, paymentMethod: '', footerNote: '',
           items: [
-            { description: 'Professional services', qty: 2, unitPrice: 450 },
-            { description: 'Goods — 3 units', qty: 3, unitPrice: 100 }
+            { description: 'Servicios profesionales', qty: 2, unitPrice: 450 },
+            { description: 'Mercancía — 3 unidades', qty: 3, unitPrice: 100 }
           ]
         },
         estrella: {
@@ -916,7 +916,7 @@
           issuerTaxLabel: 'Cuit', issuerTaxValue: '27-23304147-0',
           clientName: 'KD Group Spa.', clientAddress: 'Huérfanos 1052, Piso 9 - Santiago - Chile',
           clientTaxLabel: 'RUT', clientTaxValue: '77.060.842-2', clientEmail: '',
-          taxName: 'Tax', taxRate: 0,
+          taxName: 'Impuesto', taxRate: 0,
           paymentMethod: 'Global66\nTransferencia Internacional',
           footerNote: 'Este documento es de uso comercial y no constituye factura fiscal en Argentina.',
           items: [
@@ -1019,8 +1019,8 @@
           '<div class="mx-card">' +
           '<div class="mx-head">' +
           '<div>' +
-          '<h1>INVOICE</h1>' +
-          '<div class="mx-meta">No. ' + escapeHtml(data.number) + ' · Issue date ' + escapeHtml(data.date) + '</div>' +
+          '<h1>FACTURA</h1>' +
+          '<div class="mx-meta">No. ' + escapeHtml(data.number) + ' · Fecha de emisión ' + escapeHtml(data.date) + '</div>' +
           '</div>' +
           '<div class="mx-flag-block">' +
           '<div class="mx-flag"><span></span><span></span><span></span></div>' +
@@ -1030,24 +1030,24 @@
           '</div>' +
           '<div class="mx-parties">' +
           '<div class="party">' +
-          '<div class="party-label seller">SELLER · ISSUER</div>' +
+          '<div class="party-label seller">VENDEDOR · EMISOR</div>' +
           '<div class="party-name">' + escapeHtml(data.issuerName) + '</div>' +
           '<div class="party-sub">' + escapeHtml(data.issuerAddress) + '</div>' +
           '<div class="party-sub">' + escapeHtml(data.issuerTaxLabel) + (data.issuerTaxValue ? ': ' + escapeHtml(data.issuerTaxValue) : '') + '</div>' +
           '</div>' +
           '<div class="party">' +
-          '<div class="party-label buyer">BUYER · ABROAD</div>' +
+          '<div class="party-label buyer">COMPRADOR · EXTRANJERO</div>' +
           '<div class="party-name">' + escapeHtml(data.clientName) + '</div>' +
           '<div class="party-sub">' + escapeHtml(data.clientAddress) + '</div>' +
           '<div class="party-sub">' + escapeHtml(data.clientTaxLabel) + (data.clientTaxValue ? ': ' + escapeHtml(data.clientTaxValue) : '') + '</div>' +
           '</div>' +
           '</div>' +
           '<table class="mx-table">' +
-          '<thead><tr><th>Description</th><th>Qty</th><th>Unit</th><th>Amount</th></tr></thead>' +
+          '<thead><tr><th>Descripción</th><th>Cant.</th><th>Unidad</th><th>Importe</th></tr></thead>' +
           '<tbody>' + renderMxItemRows(data.items, symbol) + '</tbody>' +
           '</table>' +
           '<div class="mx-totals">' +
-          '<div class="row"><span>Net</span><span>' + money(totals.subtotal, symbol) + '</span></div>' +
+          '<div class="row"><span>Subtotal</span><span>' + money(totals.subtotal, symbol) + '</span></div>' +
           '<div class="row"><span>' + escapeHtml(data.taxName) + ' ' + escapeHtml(data.taxRate) + '%</span><span>' + money(totals.taxAmount, symbol) + '</span></div>' +
           '<div class="row total"><span>TOTAL</span><span>' + money(totals.total, symbol) + '</span></div>' +
           '</div>' +
@@ -1081,10 +1081,10 @@
           '<div class="est-line">' + escapeHtml(data.issuerContact) + '</div>' +
           '</div>' +
           '</div>' +
-          '<div class="est-invoice-word">INVOICE</div>' +
+          '<div class="est-invoice-word">FACTURA</div>' +
           '</div>' +
           '<div class="est-bar">' +
-          '<div class="est-bar-left">INVOICE No. ' + escapeHtml(data.number) + '</div>' +
+          '<div class="est-bar-left">FACTURA No. ' + escapeHtml(data.number) + '</div>' +
           '<div class="est-bar-right">FECHA: ' + escapeHtml(data.date) + '</div>' +
           '</div>' +
           '<div class="est-client">' +
@@ -1095,7 +1095,7 @@
           '</div>' +
           '<div class="est-section-title">DESCRIPCIÓN DEL SERVICIO</div>' +
           '<table class="est-table">' +
-          '<thead><tr><th>Item</th><th>Concepto</th><th>Valor unitario</th><th>Total</th></tr></thead>' +
+          '<thead><tr><th>No.</th><th>Concepto</th><th>Valor unitario</th><th>Total</th></tr></thead>' +
           '<tbody>' + renderEstrellaItemRows(data.items, symbol) + '</tbody>' +
           '</table>' +
           '<div class="est-bottom">' +
